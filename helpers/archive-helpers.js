@@ -1,6 +1,8 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
+var http = require('http');
+
 
 /*
  * You will need to reuse the same paths many times over in the course of this sprint.
@@ -30,7 +32,16 @@ exports.readListOfUrls = function(callback) {
     if (err) {
       throw err;
     }
-    var urlArray = data.split('\n');
+
+    var urlArray;
+    if (data.length === 0) {
+      urlArray = [];
+    } else {
+      urlArray = data.split('\n');
+    }
+    
+    
+    
     callback(urlArray);
   });
 };
@@ -44,7 +55,7 @@ exports.isUrlInList = function(url, callback) {
 
 exports.addUrlToList = function(url, callback) {
   this.isUrlInList(url, (check, urlArray) => {
-    if(!check) {
+    if (!check) {
       urlArray.push(url);
       var urlString = urlArray.join('\n');
       fs.writeFile(this.paths.list, urlString);
@@ -66,4 +77,26 @@ exports.isUrlArchived = function(url, callback) {
 };
 
 exports.downloadUrls = function(urls) {
+
+  for (var i = 0; i < urls.length; i++) {
+    var options = {
+      hostname: urls[i],
+      method: 'GET',
+    };
+    
+    var body = [];
+    var req = http.request(options, (res) => {
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        body.push(chunk);
+      });
+      res.on('end', () => {        
+        fs.writeFile(this.paths.archivedSites + '/' + options.hostname, body);
+      });
+    });
+
+    req.end();
+
+  }
+  
 };
