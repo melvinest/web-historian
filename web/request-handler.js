@@ -13,11 +13,12 @@ exports.handleRequest = function (req, res) {
     
     if (req.url === '/') {
       path = archive.paths.siteAssets + '/' + 'index.html';
+    } else if (req.url === '/loading.html') {
+      path = archive.paths.siteAssets + '/' + 'loading.html';
     } else {
       path = archive.paths.archivedSites + req.url;  
     } 
-
-    fs.readFile(path, (err, data) => {
+    fs.readFile(path, 'utf8', (err, data) => {
       if (err) { 
         res.writeHead(404);
         res.end();
@@ -34,12 +35,26 @@ exports.handleRequest = function (req, res) {
     req.on('data', (chunk) => {
       body.push(chunk);
     });
+
     req.on('end', () => {
       body = queryString.parse(body[0]);
-      archive.addUrlToList(body.url + '\n', function() {
-        res.writeHead(302);
-        res.end();
-      }); 
+      var location;
+
+      archive.isUrlArchived(body.url, function(isArchived) {
+        if (isArchived) {
+          res.writeHead(302, {
+            Location: body.url
+          });
+          res.end();
+        } else {
+          archive.addUrlToList(body.url, function() {
+            res.writeHead(302, {
+              Location: 'loading.html' 
+            });
+            res.end(); 
+          }); 
+        }
+      });
     });     
     
   }
